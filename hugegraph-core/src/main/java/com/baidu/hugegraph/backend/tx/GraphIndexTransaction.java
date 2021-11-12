@@ -864,8 +864,16 @@ public class GraphIndexTransaction extends AbstractTransaction {
                     HugeProperty<?> property = elem.getProperty(field);
                     String propValue = propertyValueToString(property.value());
                     String fieldValue = (String) originQuery.userpropValue(field);
-                    if (this.matchSearchIndexWords(propValue, fieldValue)) {
-                        continue;
+                    if (((Relation) cond).relation()
+                        .equals(RelationType.TEXT_CONTAINS_ENHANCE)) {
+                        if (this.enhanceMatchSearchIndexWords(propValue,
+                                                              fieldValue)) {
+                            continue;
+                        }
+                    } else {
+                        if (this.matchSearchIndexWords(propValue, fieldValue)) {
+                            continue;
+                        }
                     }
                     return false;
                 }
@@ -883,6 +891,11 @@ public class GraphIndexTransaction extends AbstractTransaction {
         Set<String> propValues = this.segmentWords(propValue);
         Set<String> words = this.segmentWords(fieldValue);
         return CollectionUtil.hasIntersection(propValues, words);
+    }
+
+    private boolean enhanceMatchSearchIndexWords(String propValue,
+                                                 String fieldValue) {
+        return propValue.contains(fieldValue);
     }
 
     private Set<String> segmentWords(String text) {
