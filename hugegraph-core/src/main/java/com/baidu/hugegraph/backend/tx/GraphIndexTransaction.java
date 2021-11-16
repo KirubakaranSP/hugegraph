@@ -97,12 +97,17 @@ import com.baidu.hugegraph.util.NumericUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import jersey.repackaged.com.google.common.collect.Sets;
+
 public class GraphIndexTransaction extends AbstractTransaction {
 
     public static final char INDEX_SYM_ENDING = '\u0000';
     public static final String INDEX_SYM_NULL = "\u0001";
     public static final String INDEX_SYM_EMPTY = "\u0002";
     public static final char INDEX_SYM_MAX = '\u0003';
+    public static final String START_SYMBOL = "(";
+    public static final String END_SYMBOL = ")";
+    public static final String WORD_DELIMITER = "|";
 
     private final Analyzer textAnalyzer;
     private final int indexIntersectThresh;
@@ -864,16 +869,8 @@ public class GraphIndexTransaction extends AbstractTransaction {
                     HugeProperty<?> property = elem.getProperty(field);
                     String propValue = propertyValueToString(property.value());
                     String fieldValue = (String) originQuery.userpropValue(field);
-                    if (((Relation) cond).relation()
-                        .equals(RelationType.TEXT_CONTAINS_ENHANCE)) {
-                        if (this.enhanceMatchSearchIndexWords(propValue,
-                                                              fieldValue)) {
-                            continue;
-                        }
-                    } else {
-                        if (this.matchSearchIndexWords(propValue, fieldValue)) {
-                            continue;
-                        }
+                    if (this.matchSearchIndexWords(propValue, fieldValue)) {
+                        continue;
                     }
                     return false;
                 }
@@ -893,13 +890,21 @@ public class GraphIndexTransaction extends AbstractTransaction {
         return CollectionUtil.hasIntersection(propValues, words);
     }
 
-    private boolean enhanceMatchSearchIndexWords(String propValue,
-                                                 String fieldValue) {
-        return propValue.contains(fieldValue);
-    }
-
     private Set<String> segmentWords(String text) {
-        return this.textAnalyzer.segment(text);
+        /*
+         Enhance segmentWords
+         support Text.contains("(word)") and Text.contains("word1|word2|word3")
+         */
+        if (text.startsWith(START_SYMBOL) && text.endsWith(END_SYMBOL)) {
+            return Sets.newHashSet(text.substring(1, text.length() - 1));
+        } else if (text.contains(WORD_DELIMITER)) {
+            String[] split = StringUtils.split(text, WORD_DELIMITER);
+            return Sets.newHashSet(split);
+        }
+        // Add original text, retain word == propValue
+        Set<String> segment = this.textAnalyzer.segment(text);
+        segment.add(text);
+        return segment;
     }
 
     private boolean needIndexForLabel() {
