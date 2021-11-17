@@ -97,8 +97,6 @@ import com.baidu.hugegraph.util.NumericUtil;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import jersey.repackaged.com.google.common.collect.Sets;
-
 public class GraphIndexTransaction extends AbstractTransaction {
 
     public static final char INDEX_SYM_ENDING = '\u0000';
@@ -892,16 +890,19 @@ public class GraphIndexTransaction extends AbstractTransaction {
 
     private Set<String> segmentWords(String text) {
         /*
-         Enhance segmentWords
+         Enhance segmentWords.
          support Text.contains("(word)") and Text.contains("word1|word2|word3")
          */
         if (text.startsWith(START_SYMBOL) && text.endsWith(END_SYMBOL)) {
-            return Sets.newHashSet(text.substring(1, text.length() - 1));
+            return ImmutableSet.of(text.substring(1, text.length() - 1));
         } else if (text.contains(WORD_DELIMITER)) {
-            String[] split = StringUtils.split(text, WORD_DELIMITER);
-            return Sets.newHashSet(split);
+            String[] texts = StringUtils.split(text, WORD_DELIMITER);
+            return ImmutableSet.copyOf(texts);
         }
-        // Add original text, retain word == propValue
+        /*
+         Add original text to segment set.
+         Let Text.contains("word") also contain `(word == propValue)`
+         */
         Set<String> segment = this.textAnalyzer.segment(text);
         segment.add(text);
         return segment;
