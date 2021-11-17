@@ -890,8 +890,11 @@ public class GraphIndexTransaction extends AbstractTransaction {
 
     private Set<String> segmentWords(String text) {
         /*
-         Enhance segmentWords.
-         support Text.contains("(word)") and Text.contains("word1|word2|word3")
+         * Support 3 kinds of query:
+         *  - Text.contains("(word)"): query by user-specified word;
+         *  - Text.contains("word1|word2|word3"): query by user-specified words;
+         *  - Text.contains("words"): query by words splitted from analyzer;
+         * Note: all kinds support words exact match
          */
         if (text.startsWith(START_SYMBOL) && text.endsWith(END_SYMBOL)) {
             return ImmutableSet.of(text.substring(1, text.length() - 1));
@@ -899,10 +902,6 @@ public class GraphIndexTransaction extends AbstractTransaction {
             String[] texts = StringUtils.split(text, WORD_DELIMITER);
             return ImmutableSet.copyOf(texts);
         }
-        /*
-         Add original text to segment set.
-         Let Text.contains("word") also contain `(word == propValue)`
-         */
         Set<String> segment = this.textAnalyzer.segment(text);
         segment.add(text);
         return segment;
